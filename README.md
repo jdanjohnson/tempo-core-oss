@@ -29,6 +29,19 @@ Open-source AI-powered task management and email management. Your personal produ
 └─────────────────────────────────────────────────────────┘
 ```
 
+## Screenshots
+
+### Task Board — Kanban view with project tags, priorities, and AI-assigned tasks
+![Task Board](docs/screenshots/tasks-board.png)
+
+### Email Summary — 8-category inbox triage with Gmail label counts
+![Email Summary](docs/screenshots/email-summary.png)
+
+### Chat — Natural language interface with quick commands
+![Chat Panel](docs/screenshots/chat-panel.png)
+
+---
+
 ## Why Tempo Core?
 
 - **No database required** — Gmail labels are your email categories. Obsidian markdown files are your tasks. Zero infrastructure.
