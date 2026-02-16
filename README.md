@@ -5,30 +5,7 @@ A ready-to-run [OpenClaw](https://openclaw.com/) agent configuration with a dash
 Originally extracted from [Tempo](https://github.com/jdanjohnson/tempo-assistant), a personal AI Chief of Staff system built by [Ja'dan Johnson](https://github.com/jdanjohnson), a designer and technologist focused on human-centered AI. This repo packages the core productivity features into a standalone, configurable starting point that anyone can fork, extend, and make their own.
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    User Touchpoints                      │
-│                                                          │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌─────────┐ │
-│  │ Obsidian  │  │  Gmail   │  │ Telegram │  │  Web UI │ │
-│  │  (vault)  │  │ (labels) │  │  (bot)   │  │(command)│ │
-│  └─────┬────┘  └────┬─────┘  └────┬─────┘  └────┬────┘ │
-│        │             │             │              │      │
-│  ┌─────┴─────────────┴─────────────┴──────────────┴───┐ │
-│  │              OpenClaw Gateway (agent)               │ │
-│  │                                                     │ │
-│  │  ┌────────────┐  ┌────────────┐  ┌──────────────┐  │ │
-│  │  │   Tasks    │  │   Email    │  │  Follow-ups  │  │ │
-│  │  │ (vault IO) │  │ (Gmail API)│  │  (hybrid)    │  │ │
-│  │  └────────────┘  └────────────┘  └──────────────┘  │ │
-│  │                                                     │ │
-│  │  ┌────────────┐  ┌────────────────────────────────┐ │ │
-│  │  │ Heartbeat  │  │  Skills: task-planner,         │ │ │
-│  │  │ (30m cycle)│  │  email-composer                │ │ │
-│  │  └────────────┘  └────────────────────────────────┘ │ │
-│  │                                                     │ │
-│  │           Single Model (Gemini 2.0 Flash)           │ │
-│  └─────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────┘
+
 ```
 
 ## Screenshots
@@ -487,10 +464,6 @@ Open a [GitHub issue](https://github.com/jdanjohnson/tempo-core/issues) with:
 ## Background
 
 This project started as [Tempo](https://github.com/jdanjohnson/tempo-assistant), a personal AI Chief of Staff built by [Ja'dan Johnson](https://github.com/jdanjohnson). Ja'dan is a designer and technologist who works at the intersection of human-centered design and AI — exploring how intelligent systems can reduce the cognitive overhead between what you intend to do and what your tools actually help you accomplish.
-
-Tempo began as an experiment: what happens when you give a single person a dedicated AI agent that manages their email, tasks, calendar, and relationships? The answer was a system that ran continuously on a server, proactively surfacing what mattered via Telegram, organizing Gmail with labels, and keeping an Obsidian vault in sync — all through natural language.
-
-The core insight was simple: don't make people learn a new system. Meet them where they already are. Gmail is their inbox. Obsidian is their second brain. The agent sits in between, organizing both.
 
 This repo extracts the task and email management pieces into a generic, configurable starting point built on [OpenClaw](https://openclaw.com/). The goal is to give others a foundation to build their own AI productivity workflows — adapt the skills, swap the model, extend the tools, and make it yours.
 
