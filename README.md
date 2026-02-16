@@ -1,6 +1,8 @@
-# Tempo Core
+# OpenClaw Productivity Agent
 
-Open-source AI-powered task management and email management. Your personal productivity agent that works with the tools you already use — **Gmail** for email and **Obsidian** for tasks.
+A ready-to-run [OpenClaw](https://openclaw.com/) agent configuration with a dashboard UI, plugins, and skills for **task management** and **email management**. Built on Gmail and Obsidian — no database required.
+
+Originally extracted from [Tempo](https://github.com/jdanjohnson/tempo-assistant), a personal AI Chief of Staff system built by [Ja'dan Johnson](https://github.com/jdanjohnson), a designer and technologist focused on human-centered AI. This repo packages the core productivity features into a standalone, configurable starting point that anyone can fork, extend, and make their own.
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -37,17 +39,26 @@ Open-source AI-powered task management and email management. Your personal produ
 ### Email Summary — 8-category inbox triage with Gmail label counts
 ![Email Summary](docs/screenshots/email-summary.png)
 
-### Chat — Natural language interface with quick commands
+### Chat — Natural language agent interface with quick commands
 ![Chat Panel](docs/screenshots/chat-panel.png)
 
 ---
 
-## Why Tempo Core?
+## What's Included
 
-- **No database required** — Gmail labels are your email categories. Obsidian markdown files are your tasks. Zero infrastructure.
-- **Single model** — Runs on Gemini 2.0 Flash by default. Swap to any model in one config line.
-- **Works with your tools** — You keep using Gmail and Obsidian. The agent organizes things behind the scenes.
-- **Proactive** — 30-minute heartbeat checks for deadlines, blocked tasks, overdue follow-ups, and unread emails needing replies.
+This repo gives you a complete OpenClaw agent setup out of the box:
+
+- **16 registered tools** — Task CRUD, email triage, follow-up tracking, board sync, and more via an OpenClaw plugin
+- **2 skills** — `task-planner` (brain dump to structured tasks) and `email-composer` (draft replies)
+- **Dashboard UI** — React/Vite/Tailwind command center with Kanban board, email overview, and agent chat
+- **Heartbeat system** — Proactive 30-minute checks for deadlines, blocked work, and unanswered emails
+- **Telegram integration** — Mobile notifications for heartbeat alerts
+- **Vault template** — Ready-to-use Obsidian vault structure with Kanban board and task templates
+
+**Design decisions:**
+- **No database** — Gmail labels are your email categories. Obsidian markdown files are your tasks. Zero infrastructure.
+- **Single model** — Runs on Gemini 2.0 Flash by default. Swap to any OpenClaw-supported model in one config line.
+- **Meet users where they are** — Gmail and Obsidian are tools people already use. The agent organizes things behind the scenes.
 - **Private** — Everything runs on your machine. Your emails and tasks never leave your control.
 
 ---
@@ -196,7 +207,6 @@ For mobile notifications and heartbeat alerts:
 ## Project Structure
 
 ```
-tempo-core/
 ├── agent/                          # OpenClaw agent configuration
 │   ├── openclaw.json               # Agent config (model, heartbeat, Telegram)
 │   ├── plugins/core/               # Plugin with 16 registered tools
@@ -326,7 +336,7 @@ Edit `agent/openclaw.json`:
 }
 ```
 
-Replace with any model supported by OpenClaw (OpenAI, Anthropic, etc.).
+Replace with any model supported by OpenClaw (OpenAI, Anthropic, Mistral, etc.).
 
 ### Heartbeat frequency
 
@@ -371,10 +381,9 @@ For always-on heartbeats and Telegram notifications:
 4. **Run as a service**:
 
 ```bash
-# Create a systemd service
-sudo tee /etc/systemd/system/tempo-core.service << 'EOF'
+sudo tee /etc/systemd/system/openclaw-agent.service << 'EOF'
 [Unit]
-Description=Tempo Core Agent
+Description=OpenClaw Productivity Agent
 After=network.target
 
 [Service]
@@ -389,8 +398,8 @@ EnvironmentFile=/home/ubuntu/tempo-core/.env
 WantedBy=multi-user.target
 EOF
 
-sudo systemctl enable tempo-core
-sudo systemctl start tempo-core
+sudo systemctl enable openclaw-agent
+sudo systemctl start openclaw-agent
 ```
 
 5. **Dashboard** (optional) — Build and serve statically:
@@ -407,7 +416,7 @@ If exposing the gateway externally (e.g., for the dashboard on a different machi
 
 ```
 # Caddyfile example
-tempo.yourdomain.com {
+agent.yourdomain.com {
     reverse_proxy localhost:18789
 }
 ```
@@ -416,13 +425,74 @@ tempo.yourdomain.com {
 
 ## Contributing
 
-Contributions are welcome! Areas where help is needed:
+Contributions are welcome. Here's how to get involved.
 
-- **IMAP adapter** — Support non-Gmail email providers
-- **File-watcher daemon** — Real-time vault change detection
-- **Calendar integration** — Google Calendar sync + meeting briefs
-- **Multi-user support** — Authentication layer for shared deployments
-- **Mobile app** — React Native companion
+### Getting started
+
+1. **Fork the repo** and clone your fork
+2. **Set up your environment** — follow the Quick Start above
+3. **Create a branch** for your feature or fix:
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
+4. **Make your changes** — keep commits focused and descriptive
+5. **Test locally** — make sure the agent starts and the dashboard builds:
+   ```bash
+   cd dashboard && npm run build
+   cd agent && openclaw gateway
+   ```
+6. **Open a pull request** against `main` with a clear description of what you changed and why
+
+### Areas for contribution
+
+**New adapters:**
+- IMAP/SMTP adapter for non-Gmail email providers
+- Microsoft Outlook adapter (Graph API)
+- CalDAV adapter for calendar integration
+
+**New skills:**
+- Meeting briefer — cross-reference calendar with tasks and contacts
+- Research assistant — web search + summarization
+- Weekly review generator — automated retrospectives
+
+**Dashboard improvements:**
+- File-watcher daemon for real-time vault change detection (currently agent-polled)
+- Task detail drawer with inline editing
+- Email thread viewer
+- Dark/light theme toggle
+
+**Infrastructure:**
+- Multi-user authentication layer
+- Docker Compose setup for one-command deployment
+- Mobile companion app (React Native)
+- Webhook integrations (GitHub, Linear, Slack)
+
+### Code conventions
+
+- TypeScript for all agent code and dashboard
+- All plugin tools must return `jsonResult()` format
+- Email content must be wrapped in `<untrusted_email_data>` tags before LLM processing
+- No hardcoded API keys, email addresses, or personal references
+- Prefer editing existing files over creating new ones
+
+### Reporting issues
+
+Open a [GitHub issue](https://github.com/jdanjohnson/tempo-core/issues) with:
+- Steps to reproduce
+- Expected vs actual behavior
+- Your environment (Node version, OS, OpenClaw version)
+
+---
+
+## Background
+
+This project started as [Tempo](https://github.com/jdanjohnson/tempo-assistant), a personal AI Chief of Staff built by [Ja'dan Johnson](https://github.com/jdanjohnson). Ja'dan is a designer and technologist who works at the intersection of human-centered design and AI — exploring how intelligent systems can reduce the cognitive overhead between what you intend to do and what your tools actually help you accomplish.
+
+Tempo began as an experiment: what happens when you give a single person a dedicated AI agent that manages their email, tasks, calendar, and relationships? The answer was a system that ran continuously on a server, proactively surfacing what mattered via Telegram, organizing Gmail with labels, and keeping an Obsidian vault in sync — all through natural language.
+
+The core insight was simple: don't make people learn a new system. Meet them where they already are. Gmail is their inbox. Obsidian is their second brain. The agent sits in between, organizing both.
+
+This repo extracts the task and email management pieces into a generic, configurable starting point built on [OpenClaw](https://openclaw.com/). The goal is to give others a foundation to build their own AI productivity workflows — adapt the skills, swap the model, extend the tools, and make it yours.
 
 ---
 
