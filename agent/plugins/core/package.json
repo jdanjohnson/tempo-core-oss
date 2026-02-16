@@ -1,0 +1,11 @@
+{
+  "name": "tempo-core-plugin",
+  "version": "1.0.0",
+  "description": "Tempo Core plugin — task management (Obsidian vault) + email management (Gmail labels)",
+  "main": "index.ts",
+  "dependencies": {
+    "@sinclair/typebox": "^0.32.0",
+    "googleapis": "^144.0.0",
+    "gray-matter": "^4.0.3"
+  }
+}

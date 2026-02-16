@@ -1,0 +1,58 @@
+{
+  "meta": {
+    "lastTouchedVersion": "1.0.0",
+    "lastTouchedAt": "2026-02-16T00:00:00.000Z"
+  },
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "google/gemini-2.0-flash"
+      },
+      "models": {
+        "google/gemini-2.0-flash": {}
+      },
+      "maxConcurrent": 4,
+      "heartbeat": {
+        "every": "30m",
+        "model": "google/gemini-2.0-flash",
+        "target": "telegram",
+        "to": "",
+        "activeHours": {
+          "start": "08:00",
+          "end": "23:00",
+          "timezone": "America/New_York"
+        },
+        "ackMaxChars": 300
+      }
+    }
+  },
+  "channels": {
+    "telegram": {
+      "enabled": true,
+      "dmPolicy": "pairing",
+      "botToken": "",
+      "groupPolicy": "allowlist",
+      "streamMode": "partial"
+    }
+  },
+  "gateway": {
+    "mode": "local",
+    "controlUi": {
+      "enabled": true,
+      "allowInsecureAuth": true,
+      "allowedOrigins": [
+        "http://localhost:5173"
+      ]
+    }
+  },
+  "commands": {
+    "native": "auto",
+    "nativeSkills": "auto"
+  },
+  "skills": {
+    "load": {
+      "watch": true,
+      "watchDebounceMs": 250
+    }
+  }
+}
