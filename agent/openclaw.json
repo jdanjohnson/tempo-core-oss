@@ -1,17 +1,55 @@
 {
   "meta": {
-    "lastTouchedVersion": "1.0.0",
-    "lastTouchedAt": "2026-02-16T00:00:00.000Z"
+    "lastTouchedVersion": "2026.2.19",
+    "lastTouchedAt": "2026-02-26T00:00:00.000Z"
+  },
+  "memory": {
+    "backend": "qmd",
+    "citations": "auto",
+    "qmd": {
+      "includeDefaultMemory": true,
+      "update": {
+        "interval": "5m",
+        "debounceMs": 15000
+      },
+      "limits": {
+        "maxResults": 6,
+        "timeoutMs": 4000
+      },
+      "scope": {
+        "default": "allow",
+        "rules": [
+          { "action": "allow", "match": { "chatType": "direct" } },
+          { "action": "allow", "match": { "chatType": "channel" } }
+        ]
+      },
+      "sessions": {
+        "enabled": true,
+        "retentionDays": 30
+      }
+    }
   },
   "agents": {
     "defaults": {
       "model": {
-        "primary": "google/gemini-2.0-flash"
-      },
-      "models": {
-        "google/gemini-2.0-flash": {}
+        "primary": "google/gemini-2.0-flash",
+        "fallbacks": [
+          "google/gemini-2.5-flash",
+          "openai/gpt-4o-mini"
+        ]
       },
       "maxConcurrent": 4,
+      "subagents": {
+        "maxConcurrent": 8
+      },
+      "compaction": {
+        "memoryFlush": {
+          "enabled": true,
+          "softThresholdTokens": 4000,
+          "systemPrompt": "Session nearing compaction. Save any important context, decisions, or user preferences to memory before context is lost.",
+          "prompt": "Write any lasting notes to the appropriate memory file. Reply with NO_REPLY if nothing to store."
+        }
+      },
       "heartbeat": {
         "every": "30m",
         "model": "google/gemini-2.0-flash",
@@ -26,17 +64,25 @@
       }
     }
   },
+  "messages": {
+    "ackReactionScope": "group-mentions"
+  },
   "channels": {
     "telegram": {
       "enabled": true,
       "dmPolicy": "pairing",
       "botToken": "",
       "groupPolicy": "allowlist",
-      "streamMode": "partial"
+      "streamMode": "partial",
+      "reactionNotifications": "own"
     }
   },
   "gateway": {
     "mode": "local",
+    "trustedProxies": ["127.0.0.1", "::1"],
+    "auth": {
+      "mode": "none"
+    },
     "controlUi": {
       "enabled": true,
       "allowInsecureAuth": true,
@@ -48,6 +94,20 @@
   "commands": {
     "native": "auto",
     "nativeSkills": "auto"
+  },
+  "plugins": {
+    "load": {
+      "paths": ["./plugins"]
+    }
+  },
+  "hooks": {
+    "internal": {
+      "enabled": true,
+      "entries": {
+        "command-logger": { "enabled": true },
+        "session-memory": { "enabled": true }
+      }
+    }
   },
   "skills": {
     "load": {

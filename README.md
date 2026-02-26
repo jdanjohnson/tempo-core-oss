@@ -1,6 +1,6 @@
 # OpenClaw Productivity Agent
 
-A ready-to-run [OpenClaw](https://openclaw.com/) agent configuration with a dashboard UI, plugins, and skills for **task management** and **email management**. Built on Gmail and Obsidian — no database required.
+A ready-to-run [OpenClaw](https://openclaw.com/) agent configuration with a dashboard UI, plugins, and skills for **task management** and **email management**. Built on Gmail and Obsidian — no database required. Compatible with **OpenClaw v2026.2.19+**.
 
 Originally extracted from [Tempo](https://github.com/jdanjohnson/tempo-assistant), a personal AI Chief of Staff system built by [Ja'dan Johnson](https://github.com/jdanjohnson), a designer and technologist focused on human-centered AI. This repo packages the core productivity features into a standalone, configurable starting point that anyone can fork, extend, and make their own.
 
@@ -28,13 +28,17 @@ This repo gives you a complete OpenClaw agent setup out of the box:
 - **16 registered tools** — Task CRUD, email triage, follow-up tracking, board sync, and more via an OpenClaw plugin
 - **2 skills** — `task-planner` (brain dump to structured tasks) and `email-composer` (draft replies)
 - **Dashboard UI** — React/Vite/Tailwind command center with Kanban board, email overview, and agent chat
-- **Heartbeat system** — Proactive 30-minute checks for deadlines, blocked work, and unanswered emails
+- **Heartbeat system** — Proactive 30-minute checks for deadlines, blocked work, and unanswered emails (with v2026.2.19 heartbeat guard)
 - **Telegram integration** — Mobile notifications for heartbeat alerts
 - **Vault template** — Ready-to-use Obsidian vault structure with Kanban board and task templates
+- **QMD memory** — Queryable Markdown memory backend with hybrid search (BM25 + vectors + reranking)
+- **Hooks engine** — Event-driven automation with bundled `command-logger` and `session-memory` hooks
+- **Model fallbacks** — Automatic failover chain (Gemini 2.0 Flash -> Gemini 2.5 Flash -> GPT-4o Mini)
+- **Compaction memory flush** — Automatically saves context before session compaction
 
 **Design decisions:**
 - **No database** — Gmail labels are your email categories. Obsidian markdown files are your tasks. Zero infrastructure.
-- **Single model** — Runs on Gemini 2.0 Flash by default. Swap to any OpenClaw-supported model in one config line.
+- **Model fallbacks** — Runs on Gemini 2.0 Flash by default with automatic failover. Swap to any OpenClaw-supported model in one config line.
 - **Meet users where they are** — Gmail and Obsidian are tools people already use. The agent organizes things behind the scenes.
 - **Private** — Everything runs on your machine. Your emails and tasks never leave your control.
 
@@ -53,8 +57,8 @@ This repo gives you a complete OpenClaw agent setup out of the box:
 ### 1. Clone and configure
 
 ```bash
-git clone https://github.com/jdanjohnson/tempo-core.git
-cd tempo-core
+git clone https://github.com/mad-dog-it/Openclaw-AI-Assistant-Project.git
+cd Openclaw-AI-Assistant-Project
 cp .env.example .env
 ```
 
@@ -106,6 +110,8 @@ openclaw gateway
 ```
 
 The agent starts on port `18789` by default.
+
+> **Note (v2026.2.19):** The gateway defaults to `auth.mode: "none"` for local use. If you expose the gateway externally through a reverse proxy, the `trustedProxies` config ensures WebSocket connections aren't rejected with "device identity required" errors. See the [Deployment](#deployment) section.
 
 ### 5. Start the dashboard (optional)
 
@@ -185,9 +191,10 @@ For mobile notifications and heartbeat alerts:
 
 ```
 ├── agent/                          # OpenClaw agent configuration
-│   ├── openclaw.json               # Agent config (model, heartbeat, Telegram)
+│   ├── openclaw.json               # Agent config (model, memory, hooks, heartbeat, Telegram)
 │   ├── plugins/core/               # Plugin with 16 registered tools
 │   │   ├── index.ts                # Tool registration via api.registerTool()
+│   │   ├── openclaw.plugin.json    # Plugin manifest (required by OpenClaw v2026.2.19+)
 │   │   └── package.json            # Dependencies (typebox, googleapis, gray-matter)
 │   ├── lib/                        # Core libraries
 │   │   ├── vault-sync.ts           # Board.md ↔ task file synchronization
@@ -219,7 +226,7 @@ For mobile notifications and heartbeat alerts:
 │   ├── Templates/Task.md           # Task template with frontmatter
 │   ├── Follow-Ups.md               # Follow-up tracking
 │   └── Projects/                   # Project folder
-├── .env.example                    # Required environment variables
+├── .env.example                    # Required environment variables template
 └── README.md
 ```
 
@@ -307,13 +314,19 @@ Edit `agent/openclaw.json`:
 {
   "agents": {
     "defaults": {
-      "model": "google/gemini-2.0-flash"
+      "model": {
+        "primary": "google/gemini-2.0-flash",
+        "fallbacks": [
+          "google/gemini-2.5-flash",
+          "openai/gpt-4o-mini"
+        ]
+      }
     }
   }
 }
 ```
 
-Replace with any model supported by OpenClaw (OpenAI, Anthropic, Mistral, etc.).
+Replace `primary` with any model supported by OpenClaw (OpenAI, Anthropic, Mistral, etc.). The `fallbacks` array provides automatic failover if the primary model is unavailable.
 
 ### Heartbeat frequency
 
@@ -327,6 +340,54 @@ In `agent/openclaw.json`:
       "start": "08:00",
       "end": "23:00",
       "timezone": "America/New_York"
+    }
+  }
+}
+```
+
+### QMD Memory
+
+The agent uses Queryable Markdown (QMD) as its memory backend, enabling hybrid search across workspace markdown files:
+
+```json
+{
+  "memory": {
+    "backend": "qmd",
+    "qmd": {
+      "limits": { "maxResults": 6, "timeoutMs": 4000 },
+      "sessions": { "enabled": true, "retentionDays": 30 }
+    }
+  }
+}
+```
+
+Memory files in `workspace/memory/` are automatically indexed and searchable.
+
+### Hooks
+
+Two bundled hooks are enabled by default:
+
+| Hook | Purpose |
+|---|---|
+| `command-logger` | Logs all tool usage for debugging |
+| `session-memory` | Persists important context before session compaction |
+
+Add custom hooks by creating directories in `workspace/hooks/` with a `HOOK.md` frontmatter file and optional `handler.js`.
+
+### Compaction memory flush
+
+When a session approaches the token limit, the agent automatically saves important context before compaction:
+
+```json
+{
+  "agents": {
+    "defaults": {
+      "compaction": {
+        "memoryFlush": {
+          "enabled": true,
+          "softThresholdTokens": 4000
+        }
+      }
     }
   }
 }
@@ -366,10 +427,10 @@ After=network.target
 [Service]
 Type=simple
 User=ubuntu
-WorkingDirectory=/home/ubuntu/tempo-core/agent
+WorkingDirectory=/home/ubuntu/Openclaw-AI-Assistant-Project/agent
 ExecStart=/usr/local/bin/openclaw gateway
 Restart=always
-EnvironmentFile=/home/ubuntu/tempo-core/.env
+EnvironmentFile=/home/ubuntu/Openclaw-AI-Assistant-Project/.env
 
 [Install]
 WantedBy=multi-user.target
@@ -394,9 +455,15 @@ If exposing the gateway externally (e.g., for the dashboard on a different machi
 ```
 # Caddyfile example
 agent.yourdomain.com {
-    reverse_proxy localhost:18789
+    reverse_proxy 127.0.0.1:18789
 }
 ```
+
+> **Important (v2026.2.19):** Use `127.0.0.1:18789` (not `localhost:18789`) in your reverse proxy config to avoid IPv6 connection issues. The gateway binds to IPv4 only, but `localhost` may resolve to `[::1]` (IPv6) first.
+>
+> The `gateway.trustedProxies` config in `openclaw.json` is set to `["127.0.0.1", "::1"]` by default. This ensures WebSocket connections through a local reverse proxy aren't rejected with "device identity required" errors.
+>
+> If your reverse proxy runs on a different machine, add its IP to `trustedProxies`.
 
 ---
 
@@ -454,10 +521,10 @@ Contributions are welcome. Here's how to get involved.
 
 ### Reporting issues
 
-Open a [GitHub issue](https://github.com/jdanjohnson/tempo-core/issues) with:
+Open a [GitHub issue](https://github.com/mad-dog-it/Openclaw-AI-Assistant-Project/issues) with:
 - Steps to reproduce
 - Expected vs actual behavior
-- Your environment (Node version, OS, OpenClaw version)
+- Your environment (Node version, OS, OpenClaw version — should be v2026.2.19+)
 
 ---
 
@@ -466,6 +533,19 @@ Open a [GitHub issue](https://github.com/jdanjohnson/tempo-core/issues) with:
 This project started as [Tempo](https://github.com/jdanjohnson/tempo-assistant), a personal AI Chief of Staff built by [Ja'dan Johnson](https://github.com/jdanjohnson). Ja'dan is a designer and technologist who works at the intersection of human-centered design and AI — exploring how intelligent systems can reduce the cognitive overhead between what you intend to do and what your tools actually help you accomplish.
 
 This repo extracts the task and email management pieces into a generic, configurable starting point built on [OpenClaw](https://openclaw.com/). The goal is to give others a foundation to build their own AI productivity workflows — adapt the skills, swap the model, extend the tools, and make it yours.
+
+### OpenClaw v2026.2.19 Compatibility
+
+This repo tracks the latest stable OpenClaw release. Key features from v2026.2.19:
+
+- **QMD memory backend** — Hybrid search (BM25 + vectors + reranking) over workspace markdown files
+- **Hooks engine** — Event-driven automation (`command-logger`, `session-memory`, custom hooks)
+- **Plugin manifests** — `openclaw.plugin.json` for structured plugin discovery
+- **Model fallbacks** — Automatic failover chain across providers
+- **Gateway auth hardening** — Explicit `auth.mode: "none"` for loopback setups (prevents token auth breaking connections)
+- **Heartbeat guard** — Skips interval heartbeats when `HEARTBEAT.md` is missing/empty
+- **Compaction memory flush** — Saves important context before session compaction
+- **Trusted proxies** — `gateway.trustedProxies` for reverse proxy setups (fixes "device identity required" errors)
 
 ---
 
