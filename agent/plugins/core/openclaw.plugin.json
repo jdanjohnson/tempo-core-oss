@@ -1,0 +1,12 @@
+{
+  "id": "core",
+  "name": "core",
+  "version": "1.0.0",
+  "description": "Core productivity plugin — task management (Obsidian vault) + email management (Gmail labels)",
+  "main": "index.ts",
+  "configSchema": {
+    "type": "object",
+    "properties": {},
+    "required": []
+  }
+}
