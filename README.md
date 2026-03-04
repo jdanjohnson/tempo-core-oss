@@ -1,6 +1,6 @@
 # OpenClaw Productivity Agent
 
-A ready-to-run [OpenClaw](https://openclaw.com/) agent configuration with a dashboard UI, plugins, and skills for **task management** and **email management**. Built on Gmail and Obsidian — no database required. Compatible with **OpenClaw v2026.2.19+**. See the [Changelog](CHANGELOG.md) for version history.
+A ready-to-run [OpenClaw](https://openclaw.com/) agent configuration with a dashboard UI, plugins, and skills for **task management** and **email management**. Built on Gmail and Obsidian — no database required. Compatible with **OpenClaw v2026.3.x** (and v2026.2.19+). See the [Changelog](CHANGELOG.md) for version history.
 
 Originally extracted from [Tempo](https://github.com/jdanjohnson/tempo-assistant), a personal AI Chief of Staff system built by [Ja'dan Johnson](https://github.com/jdanjohnson), a designer and technologist focused on human-centered AI. This repo packages the core productivity features into a standalone, configurable starting point that anyone can fork, extend, and make their own.
 
@@ -36,7 +36,7 @@ This repo gives you a complete OpenClaw agent setup out of the box:
 - **No database** — Gmail labels are your email categories. Obsidian markdown files are your tasks. Zero infrastructure.
 - **Model fallbacks** — Runs on Gemini 2.0 Flash by default with automatic failover. Swap to any OpenClaw-supported model in one config line.
 - **Meet users where they are** — Gmail and Obsidian are tools people already use. The agent organizes things behind the scenes.
-- **Private** — Everything runs on your machine. Your emails and tasks never leave your control.
+- **Private** — Everything runs on your machine or your own server. Your emails and tasks never leave your control.
 
 ---
 
@@ -48,7 +48,7 @@ This repo gives you a complete OpenClaw agent setup out of the box:
 |---|---|---|
 | [Node.js](https://nodejs.org/) | **v22+** | `node --version` |
 | [npm](https://www.npmjs.com/) | **v10+** | `npm --version` |
-| [OpenClaw](https://openclaw.com/) | **v2026.2.19+** | `openclaw --version` |
+| [OpenClaw](https://openclaw.com/) | **v2026.3.x** (v2026.2.19 minimum) | `openclaw --version` |
 | [Git](https://git-scm.com/) | any | `git --version` |
 
 **Platform integrations (configure after install):**
@@ -439,65 +439,143 @@ VITE_GATEWAY_URL=ws://localhost:18789
 
 ## Deployment
 
-### Local (recommended for personal use)
+### Local (simple + private)
 
-The installation guide above runs everything locally. This is the simplest and most private setup.
+The installation guide above runs everything locally. This is the simplest setup.
 
-### Cloud server (DigitalOcean / VPS)
+### DigitalOcean 1-Click droplet (recommended for always-on)
 
-For always-on heartbeats and Telegram notifications:
+If you want your agent running 24/7 (heartbeats, Telegram notifications, always-available chat), the easiest path is the **OpenClaw DigitalOcean 1-Click** image.
 
-1. **Provision a server** — Any Linux VPS with Node.js 22+
-2. **Clone the repo** and configure `.env`
-3. **Sync your vault** — Use [Obsidian Sync](https://obsidian.md/sync), [Syncthing](https://syncthing.net/), or rsync to keep your vault accessible on the server
-4. **Run as a service**:
+**Architecture:**
+
+```
+  You (laptop)
+    │
+    ├── git push ──────► GitHub (backup + version history)
+    │                       │
+    │                       ├── GitHub Actions (auto-deploy)
+    │                       │       │
+    │                       │       ▼
+    │                    DigitalOcean Droplet
+    │                    ┌──────────────────────┐
+    │    SSH ───────────►│  OpenClaw Gateway     │
+    │                    │  (agent execution)    │
+    │                    │  Caddy (HTTPS)        │
+    │                    └──────────┬───────────┘
+    │                               │ wss://
+    │                               ▼
+    └── browser ──────► Vercel (dashboard UI, free)
+```
+
+- **Droplet** runs the OpenClaw gateway (execution)
+- **GitHub** stores your config (backup + version history)
+- **GitHub Actions** keeps the droplet in sync (auto-deploy on push)
+- **Vercel** hosts the dashboard UI (free)
+- **Caddy** provides automatic HTTPS (free Let's Encrypt certs)
+
+#### Step 1  Provision the droplet
+
+1. Create a droplet from the OpenClaw 1-Click image.
+2. SSH in:
 
 ```bash
-sudo tee /etc/systemd/system/openclaw-agent.service << 'EOF'
-[Unit]
-Description=OpenClaw Productivity Agent
-After=network.target
-
-[Service]
-Type=simple
-User=ubuntu
-WorkingDirectory=/home/ubuntu/Openclaw-AI-Assistant-Project/agent
-ExecStart=/usr/local/bin/openclaw gateway
-Restart=always
-EnvironmentFile=/home/ubuntu/Openclaw-AI-Assistant-Project/.env
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-sudo systemctl enable openclaw-agent
-sudo systemctl start openclaw-agent
+ssh root@YOUR_DROPLET_IP
 ```
 
-5. **Dashboard** (optional) — Build and serve statically:
+3. Ensure OpenClaw is current:
 
 ```bash
-cd dashboard
-npm run build
-# Serve dist/ with Caddy, nginx, or any static host
+npm install -g openclaw@latest
+openclaw --version
 ```
 
-### Reverse proxy (HTTPS)
+#### Step 2  Put your config on GitHub (backup)
 
-If exposing the gateway externally (e.g., for the dashboard on a different machine):
+1. Fork this repo on GitHub
+2. Clone your fork to your laptop
+3. Pull your droplet config into the repo (so GitHub becomes your backup):
 
+```bash
+scp -r root@YOUR_DROPLET_IP:/home/openclaw/.openclaw/workspace/ ./agent/workspace/
+scp root@YOUR_DROPLET_IP:/home/openclaw/.openclaw/openclaw.json ./agent/openclaw.json
+
+# Optional but recommended if you're using the plugin tools
+scp -r root@YOUR_DROPLET_IP:/home/openclaw/.openclaw/plugins/ ./agent/plugins/
+scp -r root@YOUR_DROPLET_IP:/home/openclaw/.openclaw/lib/ ./agent/lib/
+
+git add agent/
+git commit -m "Back up my OpenClaw config"
+git push
 ```
-# Caddyfile example
+
+#### Step 3  Set up auto-deploy with GitHub Actions
+
+This repo includes a workflow at `.github/workflows/deploy.yml` that syncs your config to your droplet on every push to `main`.
+
+Add these GitHub secrets (Repo 7 Settings 7 Secrets and variables 7 Actions):
+
+| Secret | What it is | How to get it |
+|---|---|---|
+| `DROPLET_SSH_KEY` | Private SSH key used by Actions | your laptop: `cat ~/.ssh/id_ed25519` |
+| `DROPLET_KNOWN_HOSTS` | Server fingerprint | `ssh-keyscan YOUR_DROPLET_IP` |
+| `DROPLET_HOST` | Droplet IP address | DigitalOcean dashboard |
+| `DROPLET_USER` | SSH username | `root` |
+
+**Test it:** make a small change (like a line in `agent/workspace/SOUL.md`), commit, push, then watch the Actions run.
+
+#### Step 4  Deploy the dashboard (Vercel + HTTPS)
+
+The dashboard is a static Vite app in `dashboard/`. You can deploy it to Vercel for free.
+
+1. **Set up HTTPS reverse proxy on your droplet** (needed for secure WebSocket `wss://`):
+
+```bash
+# Install Caddy
+sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
+sudo apt update && sudo apt install caddy
+
+# Caddyfile
+sudo tee /etc/caddy/Caddyfile << 'EOF'
 agent.yourdomain.com {
     reverse_proxy 127.0.0.1:18789
 }
+EOF
+
+sudo systemctl restart caddy
 ```
 
-> **Important (v2026.2.19):** Use `127.0.0.1:18789` (not `localhost:18789`) in your reverse proxy config to avoid IPv6 connection issues. The gateway binds to IPv4 only, but `localhost` may resolve to `[::1]` (IPv6) first.
->
-> The `gateway.trustedProxies` config in `openclaw.json` is set to `["127.0.0.1", "::1"]` by default. This ensures WebSocket connections through a local reverse proxy aren't rejected with "device identity required" errors.
->
-> If your reverse proxy runs on a different machine, add its IP to `trustedProxies`.
+2. **Allow your Vercel domain** in `agent/openclaw.json`:
+
+```json
+{
+  "gateway": {
+    "controlUi": {
+      "allowedOrigins": [
+        "http://localhost:5173",
+        "https://your-app.vercel.app"
+      ]
+    }
+  }
+}
+```
+
+3. **Deploy to Vercel**:
+   - Import your fork
+   - Root Directory: `dashboard`
+   - Add env var: `VITE_GATEWAY_URL=wss://agent.yourdomain.com`
+
+> No domain yet? Use an SSH tunnel instead:
+> ```bash
+> ssh -L 18789:localhost:18789 root@YOUR_DROPLET_IP
+> # Then open http://localhost:18789
+> ```
+
+### Reverse proxy notes (IPv6 + trusted proxies)
+
+Use `127.0.0.1:18789` (not `localhost:18789`) in your reverse proxy config to avoid IPv6 resolution issues. The default `gateway.trustedProxies` in `agent/openclaw.json` includes `127.0.0.1` and `::1` for local proxy setups.
 
 ---
 
@@ -558,7 +636,7 @@ Contributions are welcome. Here's how to get involved.
 Open a [GitHub issue](https://github.com/jdanjohnson/Openclaw-AI-Assistant-Project/issues) with:
 - Steps to reproduce
 - Expected vs actual behavior
-- Your environment (Node version, OS, OpenClaw version — should be v2026.2.19+)
+- Your environment (Node version, OS, OpenClaw version — should be v2026.3.x)
 
 ---
 
@@ -589,9 +667,9 @@ This project started as [Tempo](https://github.com/jdanjohnson/tempo-assistant),
 
 This repo extracts the task and email management pieces into a generic, configurable starting point built on [OpenClaw](https://openclaw.com/). The goal is to give others a foundation to build their own AI productivity workflows — adapt the skills, swap the model, extend the tools, and make it yours.
 
-### OpenClaw v2026.2.19 Compatibility
+### OpenClaw v2026.3.x Compatibility
 
-This repo tracks the latest stable OpenClaw release. Key features from v2026.2.19:
+This repo tracks the latest stable OpenClaw release. Key features used:
 
 - **QMD memory backend** — Hybrid search (BM25 + vectors + reranking) over workspace markdown files
 - **Hooks engine** — Event-driven automation (`command-logger`, `session-memory`, custom hooks)
@@ -601,6 +679,9 @@ This repo tracks the latest stable OpenClaw release. Key features from v2026.2.1
 - **Heartbeat guard** — Skips interval heartbeats when `HEARTBEAT.md` is missing/empty
 - **Compaction memory flush** — Saves important context before session compaction
 - **Trusted proxies** — `gateway.trustedProxies` for reverse proxy setups (fixes "device identity required" errors)
+- **Config validation** — `openclaw config validate` catches misconfigurations before they reach runtime
+- **Telegram streaming** — `streamMode: "partial"` for real-time response delivery
+- **Security audit** — `openclaw security audit --fix` for automated DM pairing + firewall recommendations
 
 ---
 

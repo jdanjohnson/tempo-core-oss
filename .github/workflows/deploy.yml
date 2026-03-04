@@ -1,0 +1,66 @@
+name: Deploy OpenClaw config to droplet
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "agent/**"
+      - ".github/workflows/deploy.yml"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DROPLET_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          echo "${{ secrets.DROPLET_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+
+      - name: Sync workspace + config + plugins
+        run: |
+          RSYNC_SSH="ssh -i ~/.ssh/deploy_key"
+
+          # Workspace (exclude server-generated state)
+          rsync -avz --delete \
+            --exclude='memory' \
+            --exclude='knowledge' \
+            --exclude='sessions' \
+            -e "$RSYNC_SSH" \
+            agent/workspace/ \
+            ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_HOST }}:/home/openclaw/.openclaw/workspace/
+
+          # Main OpenClaw config
+          rsync -avz \
+            -e "$RSYNC_SSH" \
+            agent/openclaw.json \
+            ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_HOST }}:/home/openclaw/.openclaw/openclaw.json
+
+          # Plugin code
+          rsync -avz --delete \
+            --exclude='node_modules' \
+            -e "$RSYNC_SSH" \
+            agent/plugins/ \
+            ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_HOST }}:/home/openclaw/.openclaw/plugins/
+
+          # Shared libraries used by plugins
+          rsync -avz --delete \
+            -e "$RSYNC_SSH" \
+            agent/lib/ \
+            ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_HOST }}:/home/openclaw/.openclaw/lib/
+
+      - name: Install plugin dependencies
+        run: |
+          ssh -i ~/.ssh/deploy_key \
+            ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_HOST }} \
+            "cd /home/openclaw/.openclaw/plugins/core && npm install --omit=dev"
+
+      - name: Restart OpenClaw
+        run: |
+          ssh -i ~/.ssh/deploy_key \
+            ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_HOST }} \
+            "sudo systemctl restart openclaw"
