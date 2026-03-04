@@ -474,7 +474,7 @@ If you want your agent running 24/7 (heartbeats, Telegram notifications, always-
 - **Vercel** hosts the dashboard UI (free)
 - **Caddy** provides automatic HTTPS (free Let's Encrypt certs)
 
-#### Step 1  Provision the droplet
+#### Step 1 — Provision the droplet
 
 1. Create a droplet from the OpenClaw 1-Click image.
 2. SSH in:
@@ -490,7 +490,7 @@ npm install -g openclaw@latest
 openclaw --version
 ```
 
-#### Step 2  Put your config on GitHub (backup)
+#### Step 2 — Put your config on GitHub (backup)
 
 1. Fork this repo on GitHub
 2. Clone your fork to your laptop
@@ -509,11 +509,11 @@ git commit -m "Back up my OpenClaw config"
 git push
 ```
 
-#### Step 3  Set up auto-deploy with GitHub Actions
+#### Step 3 — Set up auto-deploy with GitHub Actions
 
 This repo includes a workflow at `.github/workflows/deploy.yml` that syncs your config to your droplet on every push to `main`.
 
-Add these GitHub secrets (Repo 7 Settings 7 Secrets and variables 7 Actions):
+Add these GitHub secrets (Repo > Settings > Secrets and variables > Actions):
 
 | Secret | What it is | How to get it |
 |---|---|---|
@@ -524,7 +524,7 @@ Add these GitHub secrets (Repo 7 Settings 7 Secrets and variables 7 Actions):
 
 **Test it:** make a small change (like a line in `agent/workspace/SOUL.md`), commit, push, then watch the Actions run.
 
-#### Step 4  Deploy the dashboard (Vercel + HTTPS)
+#### Step 4 — Deploy the dashboard (Vercel + HTTPS)
 
 The dashboard is a static Vite app in `dashboard/`. You can deploy it to Vercel for free.
 
@@ -555,12 +555,14 @@ sudo systemctl restart caddy
     "controlUi": {
       "allowedOrigins": [
         "http://localhost:5173",
-        "https://your-app.vercel.app"
+        "https://replace-me.invalid"
       ]
     }
   }
 }
 ```
+
+> Replace `https://replace-me.invalid` with your actual Vercel domain (for example: `https://my-assistant.vercel.app`).
 
 3. **Deploy to Vercel**:
    - Import your fork

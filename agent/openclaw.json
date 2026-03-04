@@ -88,7 +88,7 @@
       "allowInsecureAuth": true,
       "allowedOrigins": [
         "http://localhost:5173",
-        "https://your-app.vercel.app"
+        "https://replace-me.invalid"
       ]
     }
   },
