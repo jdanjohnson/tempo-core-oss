@@ -30,6 +30,7 @@ jobs:
             --exclude='memory' \
             --exclude='knowledge' \
             --exclude='sessions' \
+            --exclude='hooks' \
             -e "$RSYNC_SSH" \
             agent/workspace/ \
             ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_HOST }}:/home/openclaw/.openclaw/workspace/
